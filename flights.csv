@@ -53,6 +53,7 @@
 # -------------------------------------------------------------------------,,,,,,,,
 #,,,,,,,,
 Active,Airline,FlightNumber,FlightDate,Origin,Destination,CurrentSeat,CurrentTier,Notes
-Y,AA,1633,12/4/25,SAN,PHL,11D,6,Exit Aisle
+Y,AA,1633,12/04/25,SAN,PHL,11D,6,Exit Aisle
 Y,AA,1380,12/15/25,PHL,FLL,24D,6,Exit Aisle
+
 Y,AA,1380,12/19/25,FLL,PHL,24D,6,Exit Aisle
