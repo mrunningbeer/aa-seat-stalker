@@ -1,0 +1,45 @@
+name: Seat Checker
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes
+  workflow_dispatch:         # allows manual run
+
+jobs:
+  run-checker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run seat checker
+        id: runcheck
+        run: |
+          python seat_stalker.py > output.txt
+          echo "results<<EOF" >> $GITHUB_OUTPUT
+          cat output.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Send email if results contain alerts
+        if: contains(steps.runcheck.outputs.results, '🎉')
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_PASS }}
+          subject: "AA Seat Checker — Alert Found"
+          to: ${{ secrets.EMAIL_TO }}
+          from: "Seat Stalker <${{ secrets.EMAIL_USER }}>"
+          body: |
+            ${{ steps.runcheck.outputs.results }}
