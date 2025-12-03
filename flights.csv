@@ -1,0 +1,4 @@
+Active,Airline,FlightNumber,FlightDate,Origin,Destination,CurrentSeat,CurrentTier,Notes
+Y,AA,1234,2025-12-20,PHL,DFW,8C,2,MCE window row 8
+Y,AA,5678,2025-12-22,DFW,LAX,10D,3,Exit row aisle
+N,AA,999,2025-12-24,LAX,PHL,9C,1,Perfect seat - no alerts
