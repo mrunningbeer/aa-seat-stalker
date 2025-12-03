@@ -47,7 +47,7 @@
 # -------------------------------------------------------------------------,,,,,,,,
 #,,,,,,,,
 Active,Airline,FlightNumber,FlightDate,Origin,Destination,CurrentSeat,CurrentTier,Notes
-Y,AA,1633,2025-12-04,SAN,PHL,11D,1,Exit Aisle
+Y,AA,1633,2025-12-04,SAN,PHL,30B,1,middle
 Y,AA,1380,2025-12-15,PHL,FLL,24D,6,Exit Aisle
 Y,AA,1380,2025-12-19,FLL,PHL,24D,6,Exit Aisle
 ,,,,,,,,
@@ -104,3 +104,4 @@ Y,AA,1380,2025-12-19,FLL,PHL,24D,6,Exit Aisle
 ,,,,,,,,
 
 ,,,,,,,,
+
