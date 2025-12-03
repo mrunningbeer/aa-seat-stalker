@@ -57,6 +57,11 @@ def check_flights():
         reader = csv.DictReader(csvfile)
 
         for row in reader:
+
+            # Skip rows that start with "#" (comment lines)
+            if all(value.strip().startswith("#") for value in row.values()):
+               continue
+                
             active = row["Active"].strip().upper()
             if active != "Y":
                 continue  # ignore inactive trips
