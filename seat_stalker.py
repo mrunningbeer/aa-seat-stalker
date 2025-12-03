@@ -1,110 +1,132 @@
 import csv
-import requests
 from datetime import datetime
 
-# -----------------------------
-# Seat Tier Ranking Logic
-# -----------------------------
-def seat_to_tier(seat_str):
+
+# ---------------------------------------------------------------------
+# Mock seat availability
+# ---------------------------------------------------------------------
+def fetch_available_seats(airline: str, flight_number: str, flight_date: str):
     """
-    Converts a seat label like '10C' or '8A' into a tier score.
-    Higher tier_score = BETTER seat.
-    """
+    MOCK function so the workflow has something to run.
 
-    if seat_str is None or seat_str.strip() == "":
-        return 0
+    Returns a list of dicts:
+        { "seat": "11D", "tier": 6 }
 
-    seat = seat_str.upper().strip()
-
-    # Aisle seats (C & D on AA single aisle aircraft)
-    if seat.endswith("C"):
-        return 10
-    if seat.endswith("D"):
-        return 9
-
-    # Window seats (A or F)
-    if seat.endswith("A") or seat.endswith("F"):
-        return 8
-
-    # Everything else is mid-tier
-    return 5
-
-
-# -----------------------------
-# Mock Seat Map Fetcher (for now)
-# -----------------------------
-def fetch_available_seats(airline, flight_number, flight_date):
-    """
-    Eventually this will call AA's real seat map API.
-    For now, we simulate by returning *fake* seat availability.
+    `tier` should match your CSV seat-tier primer:
+        14 = First Class Aisle
+        ...
+         1 = Regular Middle
     """
 
-    # mock rotating availability just so automation *works*
-    day = int(flight_date.split("-")[-1])
+    # Rotate "good" vs "bad" availability based on day of month
+    try:
+        day = int(flight_date.split("-")[-1])
+    except Exception:
+        # If the date is weird, just pretend nothing good is available
+        return [
+            {"seat": "24E", "tier": 1},
+            {"seat": "26B", "tier": 1},
+        ]
+
     if day % 2 == 0:
-        return ["7C", "12A", "13D"]   # better seats open
+        # Even days: pretend some nicer seats are available
+        return [
+            {"seat": "11D", "tier": 6},   # MCE window exit
+            {"seat": "8C", "tier": 9},    # MCE aisle (non-bulkhead, non-exit)
+            {"seat": "3A", "tier": 13},   # First class window
+        ]
     else:
-        return ["24B", "27E"]         # nothing great
+        # Odd days: nothing really better
+        return [
+            {"seat": "24E", "tier": 1},   # regular middle
+            {"seat": "26B", "tier": 1},
+        ]
 
 
-# -----------------------------
+# ---------------------------------------------------------------------
 # Main seat comparison logic
-# -----------------------------
+# ---------------------------------------------------------------------
 def check_flights():
     alerts = []
 
+    # Open the CSV and skip any lines that start with "#" BEFORE DictReader
     with open("flights.csv", newline="") as csvfile:
-        reader = csv.DictReader(csvfile)
+        data_lines = (
+            line for line in csvfile
+            if not line.lstrip().startswith("#") and line.strip() != ""
+        )
+
+        reader = csv.DictReader(data_lines)
 
         for row in reader:
+            if not row:
+                continue
 
-            # Skip rows that start with "#" (comment lines)
-            if all(value.strip().startswith("#") for value in row.values()):
-               continue
-                
-            active = row["Active"].strip().upper()
+            # Handle missing "Active" safely
+            active = (row.get("Active") or "").strip().upper()
             if active != "Y":
-                continue  # ignore inactive trips
+                # ignore inactive trips
+                continue
 
-            airline = row["Airline"]
-            flight_number = row["FlightNumber"]
-            flight_date = row["FlightDate"]
-            origin = row["Origin"]
-            destination = row["Destination"]
-            current_seat = row["CurrentSeat"]
-            current_tier = int(row["CurrentTier"])
+            airline = (row.get("Airline") or "").strip()
+            flight_number = (row.get("FlightNumber") or "").strip()
+            flight_date = (row.get("FlightDate") or "").strip()
+            origin = (row.get("Origin") or "").strip()
+            destination = (row.get("Destination") or "").strip()
+            current_seat = (row.get("CurrentSeat") or "").strip()
 
-            # get seat availability (mock for now)
+            # CurrentTier must be an int – use 0 as absolute worst if blank
+            try:
+                current_tier = int(row.get("CurrentTier", "0"))
+            except ValueError:
+                current_tier = 0
+
+            # Get (mock) seat availability
             available = fetch_available_seats(airline, flight_number, flight_date)
 
             best_option = None
             best_tier = current_tier
 
-            for seat in available:
-                t = seat_to_tier(seat)
-                if t > best_tier:
-                    best_tier = t
+            for option in available:
+                seat = option.get("seat", "").strip()
+                try:
+                    seat_tier = int(option.get("tier", 0))
+                except ValueError:
+                    seat_tier = 0
+
+                if seat_tier > best_tier:
+                    best_tier = seat_tier
                     best_option = seat
 
+            # Build human-readable messages
             if best_option:
-                alerts.append(
-                    f"🎉 Better seat found on {airline} {flight_number} "
-                    f"({flight_date} {origin}->{destination}): {best_option} "
-                    f"(Tier {best_tier}) replacing {current_seat} (Tier {current_tier})"
+                # This line includes 🎉 so the GitHub Action will trigger email/SMS
+                msg = (
+                    f"🎉 {airline} {flight_number} on {flight_date} "
+                    f"{origin}->{destination}: "
+                    f"better seat {best_option} (tier {best_tier}) "
+                    f"vs current {current_seat} (tier {current_tier})."
+                )
+            else:
+                # No emoji here — workflow will NOT send mail for these
+                msg = (
+                    f"{airline} {flight_number} on {flight_date} "
+                    f"{origin}->{destination}: "
+                    f"no better seat than {current_seat} (tier {current_tier})."
                 )
 
-    return alerts
+            alerts.append(msg)
+
+    return "\n".join(alerts)
 
 
-# -----------------------------
-# Script Entry Point
-# -----------------------------
-if __name__ == "__main__":
+def main():
     results = check_flights()
-
     if not results:
-        print("No better seats found.")
+        print("No flights to check.")
     else:
-        print("Alerts:")
-        for r in results:
-            print(r)
+        print(results)
+
+
+if __name__ == "__main__":
+    main()
